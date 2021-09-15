@@ -1,4 +1,3 @@
-# howijd
+![howijd.network](./assets/images/howijd/src/howijd-full-with-bg.svg)
 
-> Howijd Network open tracker where roadmap dependencies are aggregated and all public resources can be found.
-
+**Howijd Network resources and aggregated roadmap dependencies.**
