@@ -1,0 +1,1 @@
+# $HOWI brand resources

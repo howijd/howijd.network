@@ -1,0 +1,1 @@
+# HOWIJD brand resources
