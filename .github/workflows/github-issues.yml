@@ -1,0 +1,436 @@
+name: GitHub issues
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - deleted
+      - transferred
+      - pinned
+      - unpinned
+      - closed
+      - reopened
+      - assigned
+      - unassigned
+      - labeled
+      - unlabeled
+      - locked
+      - unlocked
+      - milestoned
+      - demilestoned
+
+  issue_comment:
+    types:
+      - created
+      # - deleted
+      # - edited
+
+  schedule:
+    - name: "daily"
+      cron: '0 0 * * *' # e.g. 5min */5 * * * *
+
+jobs:
+  #############################################################################
+  # Workflow pipline triggers
+  # add pipline entrypoint based on event or multiple conditions
+  #############################################################################
+  issue-comment:
+    name: Issue comment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && !github.event.issue.pull_request
+    steps:
+      - if: github.event.action == 'created'
+        run: |
+          echo "${{ github.event.sender.login }} commented on issue #${{ github.event.issue.number }}"
+      - if: github.event.action == 'deleted'
+        run: |
+          echo "${{ github.event.sender.login }} deleted comment on issue #${{ github.event.issue.number }}"
+      - if: github.event.action == 'edited'
+        run: |
+          echo "${{ github.event.sender.login }} edited comment on issue #${{ github.event.issue.number }}"
+
+  # Issues
+  issue:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues'
+    outputs:
+      user-issues-total: ${{ steps.set-from-github-api.outputs.totalCount }}
+      zen: ${{ steps.set-from-github-api.outputs.zen }}
+    steps:
+      # no pull request should trugger this job
+      - name: is pull request
+        if: github.event.issue.pull_request
+        run: |
+          echo "issue #${{ github.event.issue.number }} pull_request #${{ github.event.issue.pull_request }}"
+          exit 1
+      # just print issue payload
+      - name: issue payload
+        run: |
+          echo '::group::${{ format('issue #{0} - {1}', github.event.issue.number, github.event.issue.html_url) }}'
+          echo '${{ toJSON(github.event) }}'
+          echo '::endgroup::'
+      - name: set from github graphql
+        id: set-from-github-graphql
+        uses: actions/github-script@v4
+        with:
+          script: |
+            const user = context.payload.sender.login
+            // TOTAL ISSUES
+            const query = `query($user: String) {
+              repository(owner: "mkungla", name: "github-cicd") {
+                issues(filterBy: {createdBy: $user}) {
+                  totalCount
+                }
+              }
+            }`
+            const res = await github.graphql(query, {
+              "user": user
+            })
+            core.info(`user: ${user} has total ${res.repository.issues.totalCount} issues`)
+            core.setOutput('totalCount', res.repository.issues.totalCount)
+      - name: set from github api
+        id: set-from-github-api
+        uses: actions/github-script@v4
+        with:
+          script: |
+            // RANDOM SENTENCE
+            // const zen = await github.rest.meta.getZen()
+            const { data: zen } = await github.request('GET /zen')
+            core.info(zen)
+            core.setOutput('zen', zen)
+  # Schedule
+  schedule:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
+  #############################################################################
+  # Workflow action tricers
+  # These jobs set outputs what (Workflow actors) use to trigger actual actions
+  #############################################################################
+
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: event
+        run: echo "${{ toJSON(github.event) }}"
+
+  edited:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'edited'
+    steps:
+      - run: echo "noop"
+
+  closed:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'closed'
+    steps:
+      - run: echo "noop"
+
+  deleted:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'deleted'
+    steps:
+      - run: echo "noop"
+
+  transferred:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'transferred'
+    steps:
+      - run: echo "noop"
+
+  reopened:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'reopened'
+    steps:
+      - run: echo "noop"
+
+  locked:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'locked'
+    steps:
+      - run: echo "noop"
+
+  unlocked:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'unlocked'
+    steps:
+      - run: echo "noop"
+
+  milestoned:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'milestoned'
+    steps:
+      - run: echo "noop"
+
+  demilestoned:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'demilestoned'
+    steps:
+      - run: echo "noop"
+
+  assigned:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'assigned'
+    steps:
+      - run: echo "noop"
+
+  unassigned:
+    runs-on: ubuntu-latest
+    needs:
+      - noop
+      - issue
+    if: github.event.action == 'unassigned'
+    steps:
+      - run: echo "noop"
+
+  # compose automatic comment to add
+  compose-comment:
+    needs:
+      - issue
+    runs-on: ubuntu-latest
+    outputs:
+      issue_url: ${{ github.event.issue.html_url }}
+      issue_comment: ${{ join(steps.*.outputs.issue_comment, '') }}
+    steps:
+
+      - name: greeting on first issue
+        id: greeting-on-first-issue
+        if: github.event.action == 'opened' && needs.issue.outputs.user-issues-total == 0
+        env:
+          comment: |
+            👋 Thanks for reporting @${{ github.event.sender.login }}!
+            This your first issue.
+            ***
+        run: |
+          comment="${comment//'%'/'%25'}"
+          comment="${comment//$'\n'/'%0A'}"
+          comment="${comment//$'\r'/'%0D'}"
+          echo "::set-output name=issue_comment::$comment"
+      - name: greeting for reccuring user
+        id: greeting-for-reccuring-user
+        if: github.event.action == 'opened' && needs.issue.outputs.user-issues-total > 0
+        env:
+          comment: |
+            :boom: Thanks for reporting again @${{ github.event.sender.login }}!
+            You have opened total **${{ needs.issue.outputs.user-issues-total }}** issues in this repository.
+            ***
+        run: |
+          comment="${comment//'%'/'%25'}"
+          comment="${comment//$'\n'/'%0A'}"
+          comment="${comment//$'\r'/'%0D'}"
+          echo "::set-output name=issue_comment::$comment"
+      - name: comment on empty description
+        id: comment-on-empty-description
+        if: github.event.action == 'opened' && !github.event.issue.body
+        env:
+          comment: |
+            Perhaps edit you issue and add some more detail to issue description?
+            ***
+        run: |
+          comment="${comment//'%'/'%25'}"
+          comment="${comment//$'\n'/'%0A'}"
+          comment="${comment//$'\r'/'%0D'}"
+          echo "::set-output name=issue_comment::$comment"
+      - name: opened issue footer
+        id: opened-issue-footer
+        if: github.event.action == 'opened'
+        env:
+          comment: |
+            Your issue will be reviewed shortly!
+            ${{ needs.issue.outputs.zen }}
+            This is automated message by [GitHub Actions][github-actions] configured in [.issues.yml][issues-yml]
+            [github-actions]: https://github.com/features/actions
+            [issues-yml]: https://github.com/mkungla/github-cicd/blob/main/.github/workflows/issues.yml
+            ***
+        run: |
+          comment="${comment//'%'/'%25'}"
+          comment="${comment//$'\n'/'%0A'}"
+          comment="${comment//$'\r'/'%0D'}"
+          echo "::set-output name=issue_comment::$comment"
+
+  # daily schedule
+  daily:
+    needs: schedule
+    if: github.event.schedule == '*/5 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ contains(toJSON(github.event), 'daily') }}
+        run: exit 1
+
+  # should add remove labels
+  manage-labels:
+    needs:
+      - issue
+    runs-on: ubuntu-latest
+    outputs:
+      add_labels: ${{ join(steps.*.outputs.add_labels, ',') }}
+      remove_labels: ${{ join(steps.*.outputs.remove_labels, ',') }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: on open add labels
+        id: on-open-add-labels
+        if: github.event.action == 'opened' && !contains(github.event.issue.labels.*.name, 'triage')
+        run: echo "::set-output name=add_labels::triage"
+
+      - name: on potential question
+        id: on-potential-question
+        if: github.event.action == 'opened' && endsWith(github.event.issue.title, '?')
+        run: echo "::set-output name=add_labels::question"
+
+      - name: on close remove labels
+        id: on-close-remove-labels
+        if: github.event.action == 'closed' && contains(github.event.issue.labels.*.name, 'triage')
+        run: echo "::set-output name=remove_labels::triage"
+
+      - name: on pinned add labels
+        id: on-pinned-add-labels
+        if: github.event.action == 'pinned' && !contains(github.event.issue.labels.*.name, 'attention')
+        run: echo "::set-output name=add_labels::attention"
+
+      - name: on unpinned remove labels
+        id: on-unpinned-remove-labels
+        if: github.event.action == 'unpinned' && contains(github.event.issue.labels.*.name, 'attention')
+        run: echo "::set-output name=remove_labels::attention"
+
+        # labels added
+      - name: labeled
+        if: github.event.action == 'labeled'
+        run: echo "labeled"
+        # labels added
+      - name: unlabeled
+        if: github.event.action == 'labeled'
+        run: echo "unlabeled"
+
+  #############################################################################
+  # Workflow actors
+  #############################################################################
+
+  # comment on issue
+  create-comment:
+    # all the jobs which can comment
+    needs:
+      - compose-comment
+      - manage-labels
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      contains(join(needs.*.outputs.issue_url, ''), 'https://') &&
+      join(needs.*.outputs.issue_comment, '') != ''
+    runs-on: ubuntu-latest
+    env:
+      issue_url: ${{ join(needs.*.outputs.issue_url, '') }}
+      issue_comment: ${{ join(needs.*.outputs.issue_comment, '') }}
+    steps:
+      # POST copmment
+      - name: post comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue comment ${{ env.issue_url }} --body "${{ env.issue_comment }}"
+
+  # add labels
+  add-labels:
+    needs:
+      - manage-labels
+    runs-on: ubuntu-latest
+    if: join(needs.*.outputs.add_labels, ',') != ''
+    env:
+      add_labels: ${{ join(needs.*.outputs.add_labels, ',') }}
+    steps:
+      - name: add labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue edit ${{ github.event.issue.html_url }} --add-label "${{ env.add_labels }}"
+
+  # remove labels
+  remove-labels:
+    needs:
+      - manage-labels
+    runs-on: ubuntu-latest
+    if: join(needs.*.outputs.remove_labels, ',') != ''
+    env:
+      add_labels: ${{ join(needs.*.outputs.remove_labels, ',') }}
+    steps:
+      - name: remove labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue edit ${{ github.event.issue.html_url }} --remove-label "${{ env.remove_labels }}"
+
+  # add reactions
+  reaction:
+    needs:
+      - issue
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event.action == 'opened'
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.reactions.createForIssue({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'heart',
+            })
+  # check stale issues
+  stale:
+    needs:
+      - daily
+      - issue-comment
+    # only run on schedule and issue comment
+    # also would be nice to skip that if this job was just executed
+    # e.g. on heated discussion under issue.
+    if: always() && github.event_name != 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v4
+        with:
+          days-before-issue-stale: 30
+          days-before-issue-close: 14
+          stale-issue-message: 'This issue has no activity for a while. It will be closed if no action is taken in near future'
+          close-issue-message: 'This issue was closed since there was no activity after it was marked stale.'
+          stale-issue-label: 'stale'
+          exempt-issue-labels: 'bug,security'
+          remove-issue-stale-when-updated: true
+          labels-to-add-when-unstale: 'triage'
+          exempt-all-issue-milestones: true
+          days-before-pr-stale : -1
+          days-before-pr-close: -1
+
