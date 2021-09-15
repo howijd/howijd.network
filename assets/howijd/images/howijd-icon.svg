@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xml:space="preserve"
+    style="clip-rule:evenodd;fill-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5"
+    id="howijd-logo-icon" serif:id="howijd-logo-icon" xmlns="http://www.w3.org/2000/svg"
+    xmlns:svg="http://www.w3.org/2000/svg" xmlns:serif="http://www.serif.com/">
+    <rect id="Icon" x="0" y="0" width="128" height="128" style="fill:none;stroke-width:3.99999" />
+    <g id="g51">
+        <g transform="matrix(3.40126,0,0,3.40126,-2332.72,9.5798399)">
+            <circle cx="704.65601" cy="16" r="14" style="fill-opacity:0.75;stroke:#000000;stroke-width:1.18px"
+                id="circle3" />
+        </g>
+        <g transform="matrix(4.0000001,0,0,4.0000001,0,-45.538001)">
+            <path
+                d="m 18.091,37.865 1.685,2.154 -0.276,2.21 c -1.297,0.358 -2.09,0.454 -3.5,0.454 -8.444,0 -15.299,-6.855 -15.299,-15.298 0,-8.444 6.855,-15.299 15.299,-15.299 8.444,0 15.299,6.855 15.299,15.299 0,2.562 -0.283,4.068 -1.398,6.19 l -2.384,0.085 -1.695,-2.166 c 0.796,-1.498 0.898,-2.297 0.898,-4.109 0,-5.917 -4.803,-10.721 -10.72,-10.721 -5.917,0 -10.72,4.804 -10.72,10.721 0,5.916 4.803,10.72 10.72,10.72 0.919,0 1.239,-0.022 2.091,-0.24 z"
+                style="fill:#ffffff;stroke:#000000;stroke-width:1px" id="path7" />
+        </g>
+        <g transform="matrix(2.9633601,0,0,2.9633601,-2024.148,16.58624)">
+            <path d="m 704.656,16 -5.399,3.178 -3.965,0.02 -0.085,8.95"
+                style="fill:none;stroke:#e88430;stroke-width:3.36px;stroke-linejoin:bevel" id="path11" />
+        </g>
+        <g transform="matrix(2.9633601,0,0,-2.9633601,-2024.148,111.4136)">
+            <path d="m 704.656,16 -5.399,3.178 -3.965,0.02 -0.085,8.95"
+                style="fill:none;stroke:#e88430;stroke-width:3.36px;stroke-linejoin:bevel" id="path15" />
+        </g>
+        <g transform="matrix(-2.9633601,0,0,2.9633601,2152.148,16.58624)">
+            <path d="m 704.656,16 -5.399,3.178 -3.965,0.02 -0.085,8.95"
+                style="fill:none;stroke:#e88430;stroke-width:3.36px;stroke-linejoin:bevel" id="path19" />
+        </g>
+        <g transform="matrix(-2.9633601,0,0,-2.9633601,2152.148,111.4136)">
+            <path d="m 704.656,16 -5.399,3.178 -3.965,0.02 -0.085,8.95"
+                style="fill:none;stroke:#e88430;stroke-width:3.36px;stroke-linejoin:bevel" id="path23" />
+        </g>
+        <g transform="matrix(0.73792399,0,0,0.73792399,-484.176,16)">
+            <circle cx="704.91803" cy="16.261999" r="16.261999" style="fill:#e88430" id="circle27" />
+        </g>
+        <g transform="matrix(0.73792399,0,0,0.73792399,-428.176,16)">
+            <circle cx="704.91803" cy="16.261999" r="16.261999" style="fill:#e88430" id="circle31" />
+        </g>
+        <g transform="matrix(0.73792399,0,0,0.73792399,-484.176,88.000001)">
+            <circle cx="704.91803" cy="16.261999" r="16.261999" style="fill:#e88430" id="circle35" />
+        </g>
+        <g id="Brand-Circle" serif:id="Brand Circle" transform="matrix(0.983536,0,0,0.983536,-599.90001,84.6256)">
+            <circle cx="704.91803" cy="16.261999" r="16.261999" style="fill:#e88430" id="circle39" />
+        </g>
+        <g id="connection-node" serif:id="brand-node" transform="matrix(4.2316801,0,0,4.2316801,-0.1656984,-52.536401)">
+            <circle id="node-logo-bg" cx="22.114" cy="36.193001" r="3.21" fill="#ffffff" />
+            <clipPath id="node-logo-clip">
+                <circle cx="22.114" cy="36.193001" r="3.21" id="circle44" />
+            </clipPath>
+            <g id="node-logo-container" clip-path="url(#node-logo-clip)">
+                <!-- e.g. you can place connection logos inside here-->
+            </g>
+        </g>
+    </g>
+</svg>
