@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'issues'
     outputs:
-      user-issues-total: ${{ steps.set-from-github-api.outputs.totalCount }}
+      user-issues-total: ${{ steps.set-from-github-graphql.outputs.totalCount }}
       zen: ${{ steps.set-from-github-api.outputs.zen }}
     steps:
       # no pull request should trugger this job
