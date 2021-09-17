@@ -406,10 +406,12 @@ jobs:
       matrix:
         repo:
           - howijd/howijd.network
+          - howijd/howijd.org
+          - howijd/howijd.com
+          - howijd/howi
     steps:
       - uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.HOWIBOT_GITHUB_TOKEN }}
           repository: ${{ matrix.repo }}
           event-type: workflow-file-github-issues
-
