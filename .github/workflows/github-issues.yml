@@ -46,11 +46,12 @@ on:
   schedule:
     - name: 'daily'
       cron: '0 0 * * *' # e.g. 5min */5 * * * *
+    - name: 'weekly'
+      cron: '59 23 * * 0'
     - name: 'hacktoberfest-running'
       cron: '0 0 * 10 *'
     - name: 'hacktoberfest-over'
       cron: '0 0 1 11 *'
-
   repository_dispatch:
     types:
       - workflow-file-github-issues
@@ -197,20 +198,27 @@ jobs:
       - if: ${{ contains(toJSON(github.event), 'daily') }}
         run: exit 1
 
+  # weekly schedule
+  weekly:
+    needs: schedule
+    if: github.event.schedule == '59 23 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ contains(toJSON(github.event), 'weekly') }}
+        run: exit 1
+
+
   hacktoberfest:
     needs: schedule
     if: |
       github.event.schedule == '0 0 * 10 *' ||
-      github.event.schedule == '0 0 1 11 *' ||
-      github.event.schedule == '*/5 * * * *'
-
+      github.event.schedule == '0 0 1 11 *'
     runs-on: ubuntu-latest
     steps:
       - uses: browniebroke/hacktoberfest-labeler-action@main
         continue-on-error: true # topic error - GITHUB_TOKEN do not have permissions
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
 
   # should add remove labels
   manage-labels:
@@ -369,6 +377,19 @@ jobs:
           exempt-all-issue-milestones: true
           days-before-pr-stale : -1
           days-before-pr-close: -1
+
+  # https://github.com/marketplace/actions/top-issues-labeler
+  top-issues:
+    needs:
+      - weekly
+    runs-on: ubuntu-latest
+    steps:
+    - uses: adamzolyak/top-issues-action@1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TOP_NUMBER_OF_ISSUES: 10
+        TOP_LABEL_NAME: "top-issue"
+        TOP_LABEL_COLOR: e4ef09
 
   #############################################################################
   # SELF UPDATE
