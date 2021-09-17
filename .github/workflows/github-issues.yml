@@ -384,9 +384,7 @@ jobs:
   # SHOULD RUN ONLY IN .github REPO TO DISPATCH FOR OTHER REPOS
   dipatch-update:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' &&
-      env.GITHUB_REPOSITORY == 'howijd/.github'
+    if: github.event_name == 'push' && github.repository == 'howijd/.github'
     strategy:
       matrix:
         repo:
@@ -398,4 +396,4 @@ jobs:
           repository: ${{ matrix.repo }}
           event-type: workflow-file-github-issues
 
-  # / SHOULD RUN ONLY IN .github REPO TO DISPATCH FOR OTHER REPOS
+
