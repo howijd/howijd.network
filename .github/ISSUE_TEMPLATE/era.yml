@@ -1,0 +1,81 @@
+name: HNERA
+description: Form to draft new howijd.network era
+title: "ERA NAME ?"
+labels: [era, draft]
+assignees:
+  - howijd/maintainers
+body:
+  - type: markdown
+    attributes:
+      value: |
+        NOTE! This is form for maintainers and will be automatically closed if opened by user not belonging to **@howijd/maintainers** team.
+
+  - id: slogan
+    type: input
+    attributes:
+      label: Slogan
+      description: short description or slogan for this era.
+    validations:
+      required: true
+
+  - id: semver
+    type: input
+    attributes:
+      label: Version
+      description: Semantic version for this era.
+      placeholder: '1.0.0'
+    validations:
+      required: true
+
+  - id: lock-date
+    type: input
+    attributes:
+      label: 'Start:'
+      description: Date when era API definition and features will be soft locked.
+      placeholder: 'dd.mm.yyyy || TBD'
+    validations:
+      required: true
+
+  - type: input
+    id: release-date
+    attributes:
+      label: 'Release date:'
+      description: Estimated release date.
+      placeholder: 'dd.mm.yyyy || TBD'
+    validations:
+      required: true
+
+  - type: textarea
+    id: abstract
+    attributes:
+      label: The Abstract
+      value: |
+        Abstracts are important because they give a first impression of the era!
+    validations:
+      required: true
+
+  - type: input
+    id: prevous-era-link
+    attributes:
+      label: 'Previous era:'
+      placeholder: 'howijd.network/roadmap/era/...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: resource-links
+    attributes:
+      label: Resources
+      description: Relevant resources.
+      value: |
+        | link | description |
+        | --- | --- |
+        | ... | ... |
+
+  - type: textarea
+    id: hnmiles
+    attributes:
+      label: Milestones
+      description: List of related milestones under this era.
+      value: |
+        - [ ] ... # e.g howiijd/howiijd.org#x
