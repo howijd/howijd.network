@@ -383,10 +383,13 @@ jobs:
       - run: wget -N -P .github/workflows https://raw.githubusercontent.com/howijd/.github/main/workflow-templates/github-issues.yml
       - uses: peter-evans/create-pull-request@v3.10.1
         with:
+          token: ${{ secrets.HOWIBOT_GITHUB_TOKEN }}
           commit-message: 'update github-issues.yml based on upstream'
           signoff: true
           branch: patch/github-issues.yml
           delete-branch: true
+          committer: HOWI BOT <howi@howijd.network>
+          base: main
           title: update github-issues.yml based on upstream
           body: |
             **NOTICE!**
@@ -406,6 +409,6 @@ jobs:
     steps:
       - uses: peter-evans/repository-dispatch@v1
         with:
-          token: ${{ secrets.MKUNGLA_PUBLIC_REPO_TOKEN }}
+          token: ${{ secrets.HOWIBOT_GITHUB_TOKEN }}
           repository: ${{ matrix.repo }}
           event-type: workflow-file-github-issues
