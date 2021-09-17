@@ -5,7 +5,7 @@
 # https://github.com/howijd/.github/blob/main/.github/workflows/github-issues.yml
 #
 # And opens self update pull request if base template is updated at:
-# /home/mkungla/workspaces/howijd/repos/.github/workflow-templates/github-issues.yml
+# https://github.com/howijd/.github/blob/main/workflow-templates/github-issues.yml
 #############################################################################
 name: GitHub issues
 
@@ -56,17 +56,6 @@ on:
       - workflow-file-github-issues
 
 jobs:
-  #############################################################################
-  # SELF UPDATE
-  #############################################################################
-  update:
-    if: |
-      github.event_name == 'repository_dispatch' &&
-      github.event.action == 'workflow-file-github-issues'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "update"
-
   #############################################################################
   # Workflow pipline triggers
   # add pipline entrypoint based on event or multiple conditions
@@ -381,6 +370,31 @@ jobs:
           days-before-pr-stale : -1
           days-before-pr-close: -1
 
+  #############################################################################
+  # SELF UPDATE
+  #############################################################################
+  update:
+    if: |
+      github.event_name == 'repository_dispatch' &&
+      github.event.action == 'workflow-file-github-issues'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: wget -N -P .github/workflows https://raw.githubusercontent.com/howijd/.github/main/workflow-templates/github-issues.yml
+      - uses: peter-evans/create-pull-request@v3.10.1
+        with:
+          commit-message: 'update github-issues.yml based on upstream'
+          signoff: true
+          branch: patch/github-issues.yml
+          delete-branch: true
+          title: update github-issues.yml based on upstream
+          body: |
+            **NOTICE!**
+
+            This Workflow file is tested with [this workflow](https://github.com/howijd/.github/blob/main/.github/workflows/github-issues.yml)
+            And based on this [workflow file](https://github.com/howijd/.github/blob/main/workflow-templates/github-issues.yml)
+          labels: enhancement
+
   # SHOULD RUN ONLY IN .github REPO TO DISPATCH FOR OTHER REPOS
   dipatch-update:
     runs-on: ubuntu-latest
@@ -395,5 +409,3 @@ jobs:
           token: ${{ secrets.MKUNGLA_PUBLIC_REPO_TOKEN }}
           repository: ${{ matrix.repo }}
           event-type: workflow-file-github-issues
-
-
