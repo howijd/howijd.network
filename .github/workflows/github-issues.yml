@@ -386,7 +386,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'push' &&
-      $GITHUB_REPOSITORY == 'howijd/.github'
+      env.GITHUB_REPOSITORY == 'howijd/.github'
     strategy:
       matrix:
         repo:
