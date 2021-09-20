@@ -132,6 +132,24 @@ jobs:
           GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: echo "$GITHUB_CONTEXT"
 
+  # daily schedule
+  daily:
+    needs: schedule
+    if: github.event.schedule == '0 0 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ contains(toJSON(github.event), 'daily') }}
+        run: exit 1
+
+  # weekly schedule
+  weekly:
+    needs: schedule
+    if: github.event.schedule == '59 23 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ contains(toJSON(github.event), 'weekly') }}
+        run: exit 1
+
   #############################################################################
   # Workflow action triggers
   # These jobs set outputs for (Workflow actors) use to trigger actual actions
@@ -187,37 +205,6 @@ jobs:
             This is automated message by **GitHub Actions**
 
             ***
-
-  # daily schedule
-  daily:
-    needs: schedule
-    if: github.event.schedule == '0 0 * * *'
-    runs-on: ubuntu-latest
-    steps:
-      - if: ${{ contains(toJSON(github.event), 'daily') }}
-        run: exit 1
-
-  # weekly schedule
-  weekly:
-    needs: schedule
-    if: github.event.schedule == '59 23 * * 0'
-    runs-on: ubuntu-latest
-    steps:
-      - if: ${{ contains(toJSON(github.event), 'weekly') }}
-        run: exit 1
-
-
-  hacktoberfest:
-    needs: schedule
-    if: |
-      github.event.schedule == '0 0 * 10 *' ||
-      github.event.schedule == '0 0 1 11 *'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: browniebroke/hacktoberfest-labeler-action@main
-        continue-on-error: true # topic error - GITHUB_TOKEN do not have permissions
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # should add remove labels
   manage-labels:
@@ -290,7 +277,6 @@ jobs:
   #############################################################################
   # Workflow actors
   #############################################################################
-
   # comment on issue
   create-comment:
     # all the jobs which can comment
@@ -358,6 +344,7 @@ jobs:
               repo: context.repo.repo,
               content: 'heart',
             })
+
   # check stale issues
   stale:
     needs:
@@ -383,4 +370,51 @@ jobs:
           days-before-pr-stale : -1
           days-before-pr-close: -1
 
-####
+  # hacktoberfest labeler
+  hacktoberfest:
+    needs: schedule
+    if: |
+      github.event.schedule == '0 0 * 10 *' ||
+      github.event.schedule == '0 0 1 11 *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: browniebroke/hacktoberfest-labeler-action@main
+        continue-on-error: true # topic error - GITHUB_TOKEN do not have permissions
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+
+  # https://github.com/fregante/title-to-labels-action#usage
+  title-to-labels:
+    runs-on: ubuntu-latest
+    needs:
+      - issue
+    if: github.event.action == 'opened' || github.event.action == 'edited'
+    steps:
+      - uses: fregante/title-to-labels-action@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # should issue be locked
+  lock:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'issues' &&
+      needs.issue.outputs.issue-is-era &&
+      needs.issue.outputs.issue-is-mile &&
+      github.event.action == 'opened'
+    steps:
+      - name: set from github api
+        id: set-from-github-api
+        uses: actions/github-script@v4
+        with:
+          script: |
+            try {
+              await client.issues.lock({
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            } catch (e) {
+              core.warn(`Action failed. Could not lock issue with lock reason: ${e}`)
+            }
