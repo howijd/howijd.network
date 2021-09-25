@@ -53,6 +53,10 @@ on:
         required: true
 
 jobs:
+  event:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ toJSON(github) }}"
   #############################################################################
   # Workflow pipline triggers
   # add pipline entrypoint based on event or multiple conditions
@@ -95,7 +99,7 @@ jobs:
 
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             const user = context.payload.sender.login
@@ -119,7 +123,7 @@ jobs:
 
       - name: set from github api
         id: set-from-github-api
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             // RANDOM SENTENCE
@@ -162,6 +166,55 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: exit 0
+
+  socials:
+    needs:
+      - issue
+      - issue-comment
+    runs-on: ubuntu-latest
+    if: |
+      !failure() && !cancelled() && (success('issue-comment') || success('issue')) &&
+      ((github.event_name == 'issue_comment' && github.event.action == 'created') ||
+      (github.event_name == 'issues' && github.event.action == 'opened'))
+    outputs:
+      discord-enabled: ${{ steps.discord.outputs.enabled }}
+      payload: ${{ steps.payload.outputs.result }}
+    steps:
+      - id: payload
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const payload = {
+              eventName: context.eventName,
+              author_name: context.actor,
+              author_avatar_url: '',
+              author_link: '',
+              title: '',
+              link: '',
+              icon: '',
+              message: '',
+              color: '#E88430',
+            }
+            switch (payload.eventName) {
+              case 'issues':
+                payload.link = context.payload.issue.html_url
+                payload.icon = context.payload.organization.avatar_url
+                payload.title = `#${context.payload.issue.number} ${context.payload.issue.title}`
+                payload.author_name = context.payload.sender.login
+                payload.author_avatar_url = context.payload.sender.avatar_url
+                payload.author_link = context.payload.sender.html_url
+
+                payload.message = `${ context.payload.issue.body.substring(0, 253) }...`
+                if (context.payload.issue.labels.length > 0) {
+                  payload.color = `#${context.payload.issue.labels[0].color}`
+                }
+                break
+            }
+            return payload
+      - id: discord
+        run: echo "::set-output name=enabled::${{ secrets.DISCORD_WEBHOOK_ID != '' }}"
+      - run: echo "${{ toJSON(fromJSON(steps.payload.outputs.result)) }}"
+        continue-on-error: true
 
   #############################################################################
   # Workflow action triggers
@@ -270,10 +323,10 @@ jobs:
             !fromJSON(needs.issue.outputs.issue-is-mile)  ||
             !fromJSON(needs.issue.outputs.issue-is-story))
         id: belongs-to-feature
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
-            const events = await github.issues.listEventsForTimeline({
+            const events = await github.rest.issues.listEventsForTimeline({
               owner: context.payload.repository.owner.login,
               repo: context.payload.repository.name,
               issue_number: context.issue.number,
@@ -366,10 +419,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.event.action == 'opened'
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
-            github.reactions.createForIssue({
+            github.rest.reactions.createForIssue({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -441,15 +494,15 @@ jobs:
           echo "${{ needs.issue.outputs.issue-is-mile }}"
       - name: set from github api
         id: set-from-github-api
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             try {
-              await client.issues.lock({
-              owner: github.context.repo.owner,
-              repo: github.context.repo.repo,
-              issue_number: context.issue.number,
-            })
+              await github.rest.issues.lock({
+                owner: github.context.repo.owner,
+                repo: github.context.repo.repo,
+                issue_number: context.issue.number,
+              })
             } catch (e) {
               core.warning(`Action failed. Could not lock issue with lock reason: ${e}`)
             }
@@ -479,7 +532,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             const repo = context.payload.repository.name
@@ -558,7 +611,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v4
+        uses: actions/github-script@v5
         with:
           script: |
             const repos = [
@@ -645,3 +698,46 @@ jobs:
             --title "$title" \
             --body "${{ needs.collect-week-summary.outputs.issue_body }}" \
             --label "draft,triage"
+
+  # SHARE
+  discord:
+    needs: socials
+    runs-on: ubuntu-latest
+    if: ${{ !failure() && !cancelled() && needs.socials.outputs.discord-enabled == 'true'  }}
+    steps:
+      - run: echo "${{ toJSON(needs) }}"
+        continue-on-error: true
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - run: npm install discord.js
+      - env:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          payload_str: ${{ needs.socials.outputs.payload }}
+        run: |
+          cat >> script.mjs << EOF
+            import { MessageEmbed, WebhookClient } from 'discord.js'
+            const { webhook_id, webhook_token, payload_str } = process.env
+            const payload = JSON.parse(payload_str)
+
+            const webhook = new WebhookClient({ id: webhook_id, token: webhook_token })
+
+            const embed = new MessageEmbed()
+              .setTitle(payload.title)
+              .setColor(payload.color)
+              .setDescription(payload.message)
+              .setAuthor(
+                payload.author_name,
+                payload.author_avatar_url,
+                payload.author_link,
+              )
+              .setFooter('via GitHub', 'https://github.githubassets.com/favicons/favicon.png')
+              .setURL(payload.link)
+            webhook.send({
+              username: '${{ github.event.repository.full_name }}',
+              avatarURL: '${{ github.event.organization.avatar_url }}',
+              embeds: [embed],
+            })
+          EOF
+          node ./script.mjs
