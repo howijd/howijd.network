@@ -196,6 +196,17 @@ jobs:
               color: '#E88430',
             }
             switch (payload.eventName) {
+              case 'issue_comment':
+                payload.link = context.payload.comment.html_url
+                payload.icon = context.payload.organization.avatar_url
+                payload.title = `New comment on #${context.payload.issue.number} ${context.payload.issue.title}`
+                payload.author_name = context.payload.sender.login
+                payload.author_avatar_url = context.payload.sender.avatar_url
+                payload.author_link = context.payload.sender.html_url
+                payload.message = `${ context.payload.comment.body }...`.substring(0, 253)
+                if (context.payload.issue.labels.length > 0) {
+                  payload.color = `#${context.payload.issue.labels[0].color}`
+                }
               case 'issues':
                 payload.link = context.payload.issue.html_url
                 payload.icon = context.payload.organization.avatar_url
