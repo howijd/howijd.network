@@ -35,6 +35,14 @@ on:
       # - deleted
       # - edited
 
+  discussion:
+    types:
+      - created
+
+  discussion_comment:
+    types:
+      - created
+
   schedule:
     - name: 'daily'
       cron: '0 0 * * *' # e.g. 5min */5 * * * *
@@ -61,15 +69,6 @@ jobs:
   # Workflow pipline triggers
   # add pipline entrypoint based on event or multiple conditions
   #############################################################################
-  issue-comment:
-    name: Issue comment
-    runs-on: ubuntu-latest
-    if: github.event_name == 'issue_comment' && !github.event.issue.pull_request
-    steps:
-      - if: github.event.action == 'created'
-        run: |
-          echo "${{ github.event.sender.login }} commented on issue #${{ github.event.issue.number }}"
-
   # Issues
   issue:
     runs-on: ubuntu-latest
@@ -82,13 +81,6 @@ jobs:
       issue-is-story: ${{ toJSON(contains(github.event.issue.labels.*.name, 'hn/story')) }}
       issue-is-task: ${{ toJSON(contains(github.event.issue.labels.*.name, 'hn/task')) }}
     steps:
-      # no pull request should trugger this job
-      - name: is pull request
-        if: github.event.issue.pull_request
-        run: |
-          echo "issue #${{ github.event.issue.number }} pull_request #${{ github.event.issue.pull_request }}"
-          exit 1
-
       # just print issue payload
       - name: issue info
         env:
@@ -132,6 +124,27 @@ jobs:
             core.info(zen)
             core.setOutput('zen', zen)
 
+  issue-comment:
+    name: Issue comment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && !github.event.issue.pull_request
+    steps:
+      - if: github.event.action == 'created'
+        run: |
+          echo "${{ github.event.sender.login }} commented on issue #${{ github.event.issue.number }}"
+
+  discussion:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'discussion'
+    steps:
+      - run: exit 0
+
+  discussion-comment:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'discussion_comment'
+    steps:
+      - run: exit 0
+
   # Schedule
   schedule:
     if: github.event_name == 'schedule'
@@ -171,11 +184,17 @@ jobs:
     needs:
       - issue
       - issue-comment
+      - discussion
+      - discussion-comment
     runs-on: ubuntu-latest
     if: |
-      !failure() && !cancelled() && (success('issue-comment') || success('issue')) &&
-      ((github.event_name == 'issue_comment' && github.event.action == 'created') ||
-      (github.event_name == 'issues' && github.event.action == 'opened'))
+      !failure() && !cancelled() && (success('issue-comment') || success('issue') || success('discussion') || success('discussion-comment')) &&
+      (
+        (github.event_name == 'issue_comment' && github.event.action == 'created') ||
+        (github.event_name == 'issues' && github.event.action == 'opened') ||
+        (github.event_name == 'discussion' && github.event.action == 'created') ||
+        (github.event_name == 'discussion_comment' && github.event.action == 'created')
+      )
     outputs:
       discord-enabled: ${{ steps.discord.outputs.enabled }}
       payload: ${{ steps.payload.outputs.result }}
@@ -195,18 +214,8 @@ jobs:
               message: '',
               color: '#E88430',
             }
+            let body = ''
             switch (payload.eventName) {
-              case 'issue_comment':
-                payload.link = context.payload.comment.html_url
-                payload.icon = context.payload.organization.avatar_url
-                payload.title = `New comment on #${context.payload.issue.number} ${context.payload.issue.title}`
-                payload.author_name = context.payload.sender.login
-                payload.author_avatar_url = context.payload.sender.avatar_url
-                payload.author_link = context.payload.sender.html_url
-                payload.message = `${ context.payload.comment.body }...`.substring(0, 253)
-                if (context.payload.issue.labels.length > 0) {
-                  payload.color = `#${context.payload.issue.labels[0].color}`
-                }
               case 'issues':
                 payload.link = context.payload.issue.html_url
                 payload.icon = context.payload.organization.avatar_url
@@ -214,13 +223,50 @@ jobs:
                 payload.author_name = context.payload.sender.login
                 payload.author_avatar_url = context.payload.sender.avatar_url
                 payload.author_link = context.payload.sender.html_url
-
-                payload.message = `${ context.payload.issue.body }...`.substring(0, 253)
+                body = context.payload.issue.body
                 if (context.payload.issue.labels.length > 0) {
                   payload.color = `#${context.payload.issue.labels[0].color}`
                 }
                 break
+              case 'issue_comment':
+                payload.link = context.payload.comment.html_url
+                payload.icon = context.payload.organization.avatar_url
+                payload.title = `New comment on #${context.payload.issue.number} ${context.payload.issue.title}`
+                payload.author_name = context.payload.sender.login
+                payload.author_avatar_url = context.payload.sender.avatar_url
+                payload.author_link = context.payload.sender.html_url
+                body = context.payload.comment.body
+                if (context.payload.issue.labels.length > 0) {
+                  payload.color = `#${context.payload.issue.labels[0].color}`
+                }
+                break
+              case 'discussion':
+                payload.link = context.payload.discussion.html_url
+                payload.icon = context.payload.organization.avatar_url
+                payload.title = `#${context.payload.discussion.number} ${context.payload.discussion.title}`
+                body = context.payload.discussion.body
+                payload.author_name = context.payload.sender.login
+                payload.author_avatar_url = context.payload.sender.avatar_url
+                payload.author_link = context.payload.sender.html_url
+                if (context.payload.discussion.labels && context.payload.discussion.labels.length > 0) {
+                  payload.color = `#${context.payload.discussion.labels[0].color}`
+                }
+                break
+              case 'discussion_comment':
+                payload.link = context.payload.comment.html_url
+                payload.icon = context.payload.organization.avatar_url
+                payload.title = `New comment on #${context.payload.discussion.number} ${context.payload.discussion.title}`
+                payload.author_name = context.payload.sender.login
+                payload.author_avatar_url = context.payload.sender.avatar_url
+                payload.author_link = context.payload.sender.html_url
+                body =  context.payload.comment.body
+                if (context.payload.discussion.labels && context.payload.discussion.labels.length > 0) {
+                  payload.color = `#${context.payload.discussion.labels[0].color}`
+                }
+                break
             }
+            payload.message = (body && body.length > 255) ? body.substring(0, 253) : body
+
             return payload
       - id: discord
         run: echo "::set-output name=enabled::${{ secrets.DISCORD_WEBHOOK_ID != '' }}"
@@ -630,7 +676,8 @@ jobs:
               'howi',
               'howijd.network',
               'howijd.org',
-              'howijd.com' ]
+              'howijd.com',
+            ]
 
             const getmonday = () => {
               const now = new Date()
