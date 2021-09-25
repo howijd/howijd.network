@@ -204,7 +204,7 @@ jobs:
                 payload.author_avatar_url = context.payload.sender.avatar_url
                 payload.author_link = context.payload.sender.html_url
 
-                payload.message = `${ context.payload.issue.body.substring(0, 253) }...`
+                payload.message = `${ context.payload.issue.body }...`.substring(0, 253)
                 if (context.payload.issue.labels.length > 0) {
                   payload.color = `#${context.payload.issue.labels[0].color}`
                 }
