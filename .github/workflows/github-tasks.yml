@@ -68,7 +68,10 @@ jobs:
   event:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "${{ toJSON(github) }}"
+      - run: |
+          echo "event_name: ${{ toJSON(github.event_name) }}"
+          echo "action: ${{ toJSON(github.event.action) }}"
+
   #############################################################################
   # Workflow pipline triggers
   # add pipline entrypoint based on event or multiple conditions
@@ -301,7 +304,7 @@ jobs:
                 }
                 break
             }
-            payload.message = (body && body.length > 255) ? body.substring(0, 253) : (body ?? '')
+            payload.message = (body && body.length > 255) ? body.substring(0, 253) : body
 
             return payload
 
