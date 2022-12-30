@@ -48,14 +48,10 @@ on:
       - opened
 
   schedule:
-    - name: 'daily'
-      cron: '0 0 * * *' # e.g. 5min */5 * * * *
-    - name: 'weekly'
-      cron: '0 09 * * FRI'
-    - name: 'hacktoberfest-running'
-      cron: '0 0 * 10 *'
-    - name: 'hacktoberfest-over'
-      cron: '0 0 1 11 *'
+    - cron: '0 0 * * *' # e.g. 5min */5 * * * * // 'daily'
+    - cron: '0 09 * * FRI' # 'weekly'
+    - cron: '0 0 * 10 *' # 'hacktoberfest-running'
+    - cron: '0 0 1 11 *' # 'hacktoberfest-over'
 
   workflow_dispatch:
     inputs:
@@ -98,7 +94,7 @@ jobs:
 
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             const user = context.payload.sender.login
@@ -122,7 +118,7 @@ jobs:
 
       - name: set from github api
         id: set-from-github-api
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             // RANDOM SENTENCE
@@ -139,7 +135,7 @@ jobs:
     steps:
       - name: set from github api
         id: set-from-github-api
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             // RANDOM SENTENCE
@@ -227,7 +223,7 @@ jobs:
       payload: ${{ steps.payload.outputs.result }}
     steps:
       - id: payload
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             const payload = {
@@ -310,8 +306,8 @@ jobs:
 
       - id: discord
         run: echo "::set-output name=enabled::${{ secrets.DISCORD_WEBHOOK_ID != '' }}"
-      - id: telegram
-        run: echo "::set-output name=enabled::${{ secrets.TELEGRAM_TOKEN != '' }}"
+      # - id: telegram
+      #   run: echo "::set-output name=enabled::${{ secrets.TELEGRAM_TOKEN != '' }}"
 
 
   #############################################################################
@@ -421,7 +417,7 @@ jobs:
             !fromJSON(needs.issue.outputs.issue-is-mile)  ||
             !fromJSON(needs.issue.outputs.issue-is-story))
         id: belongs-to-feature
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             const events = await github.rest.issues.listEventsForTimeline({
@@ -517,7 +513,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.event.action == 'opened'
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             github.rest.reactions.createForIssue({
@@ -592,7 +588,7 @@ jobs:
           echo "${{ needs.issue.outputs.issue-is-mile }}"
       - name: set from github api
         id: set-from-github-api
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             try {
@@ -630,7 +626,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             const repo = context.payload.repository.name
@@ -709,7 +705,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: set from github graphql
         id: set-from-github-graphql
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             const repos = [
@@ -803,7 +799,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ !failure() && !cancelled() && needs.socials.outputs.discord-enabled == 'true'  }}
     steps:
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: '16'
       - run: npm install discord.js
@@ -813,13 +809,13 @@ jobs:
           payload_str: ${{ needs.socials.outputs.payload }}
         run: |
           cat >> script.mjs << EOF
-            import { MessageEmbed, WebhookClient } from 'discord.js'
+            import { EmbedBuilder, WebhookClient } from 'discord.js'
             const { webhook_id, webhook_token, payload_str } = process.env
             const payload = JSON.parse(payload_str)
 
             const webhook = new WebhookClient({ id: webhook_id, token: webhook_token })
 
-            const embed = new MessageEmbed()
+            const embed = new EmbedBuilder()
               .setTitle(payload.title)
               .setColor(payload.color)
               .setDescription(payload.message)
@@ -838,20 +834,20 @@ jobs:
           EOF
           node ./script.mjs
 
-  telegram:
-    needs: socials
-    runs-on: ubuntu-latest
-    if: ${{ !failure() && !cancelled() && needs.socials.outputs.telegram-enabled == 'true'  }}
-    steps:
-      - uses: appleboy/telegram-action@master
-        with:
-          to: '-1001195004886'
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          format: markdown
-          disable_web_page_preview: true
-          message: |
-            [${{ fromJSON(needs.socials.outputs.payload).title }}](${{ fromJSON(needs.socials.outputs.payload).link }})
+  # telegram:
+  #   needs: socials
+  #   runs-on: ubuntu-latest
+  #   if: ${{ !failure() && !cancelled() && needs.socials.outputs.telegram-enabled == 'true'  }}
+  #   steps:
+  #     - uses: appleboy/telegram-action@master
+  #       with:
+  #         to: '-1001195004886'
+  #         token: ${{ secrets.TELEGRAM_TOKEN }}
+  #         format: markdown
+  #         disable_web_page_preview: true
+  #         message: |
+  #           [${{ fromJSON(needs.socials.outputs.payload).title }}](${{ fromJSON(needs.socials.outputs.payload).link }})
 
-            ${{ fromJSON(needs.socials.outputs.payload).message }}"
+  #           ${{ fromJSON(needs.socials.outputs.payload).message }}"
 
-            by [@${{ fromJSON(needs.socials.outputs.payload).author_name }}](${{ fromJSON(needs.socials.outputs.payload).author_link }})
+  #           by [@${{ fromJSON(needs.socials.outputs.payload).author_name }}](${{ fromJSON(needs.socials.outputs.payload).author_link }})
