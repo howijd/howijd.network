@@ -21,7 +21,7 @@ jobs:
     name: Validate PR title
     runs-on: ubuntu-latest
     steps:
-      - uses: amannn/action-semantic-pull-request@v4
+      - uses: amannn/action-semantic-pull-request@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -35,19 +35,24 @@ jobs:
             docs
             feat
             fix
-            perf
             refactor
             revert
             style
             test
+            cve
+            wip
+
           # Configure which scopes are allowed.
           scopes: |
-            cli
+            bridge
             client
-            endpoint
-            godoc
-            markdown
-            packaging
+            devel
+            lib
+            node
+            pkg
+            res
+            www
+
           # Configure that a scope must always be provided.
           requireScope: false
           # Configure additional validation for the subject based on a regex.
@@ -60,6 +65,10 @@ jobs:
             The subject "{subject}" found in the pull request title "{title}"
             didn't match the configured pattern. Please ensure that the subject
             doesn't start with an uppercase character.
+
+          ignoreLabels: |
+            automation
+
           # For work-in-progress PRs you can typically use draft pull requests
           # from Github. However, private repositories on the free plan don't have
           # this option and therefore this action allows you to opt-in to using the
@@ -71,7 +80,7 @@ jobs:
           # will suggest using that commit message instead of the PR title for the
           # merge commit, and it's easy to commit this by mistake. Enable this option
           # to also validate the commit message for one commit PRs.
-          validateSingleCommit: true
+          validateSingleCommit: false
           # Related to `validateSingleCommit` you can opt-in to validate that the PR
           # title matches a single commit to avoid confusion.
-          validateSingleCommitMatchesPrTitle: true
+          validateSingleCommitMatchesPrTitle: false
