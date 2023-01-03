@@ -1,0 +1,13 @@
+[package]
+name = "cryptdatum"
+version = "0.4.26"
+edition = "2021"
+authors = ["Marko Kungla", "The howijd.network Authors"]
+description = "The Cryptdatum format is a simple, lightweight format for storing data to be long term compatible with many encryption and compression algotiyhms."
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "cryptdatum"
+path = "cryptdatum.rs"
+
+[dependencies]
