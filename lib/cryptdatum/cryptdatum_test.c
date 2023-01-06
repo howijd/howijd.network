@@ -3,45 +3,82 @@
 
 #include "cryptdatum.h"
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
+#include <endian.h>
 
 void test_verify_header_magic()
 {
-  // Test valid header
-  uint8_t valid_header[CRYPTDATUM_HEADER_SIZE] = {0};
-  memcpy(valid_header, magic, sizeof(magic));
-  memcpy(valid_header + CRYPTDATUM_HEADER_SIZE - sizeof(delimiter), delimiter, sizeof(delimiter));
-  assert(verify_header(valid_header) == 1);
-
   // Test invalid magic number
-  uint8_t invalid_magic_header[CRYPTDATUM_HEADER_SIZE] = {0};
-  memset(invalid_magic_header, 0xFF, sizeof(invalid_magic_header));
-  memcpy(invalid_magic_header + CRYPTDATUM_HEADER_SIZE - sizeof(delimiter), delimiter, sizeof(delimiter));
-  assert(verify_header(invalid_magic_header) == 0);
+  uint8_t header[CRYPTDATUM_HEADER_SIZE] = {0};
+  memset(header, 0xFF, sizeof(header));
+
+  uint16_t version_n = htobe16(1);
+  uint64_t datum_draft_n = htobe64(DATUM_DRAFT);
+  memcpy(header + 8, &version_n, 2);
+  memcpy(header + 10, &datum_draft_n, 8);
+
+  memcpy(header + CRYPTDATUM_HEADER_SIZE - 8, CRYPTDATUM_DELIMITER, 8);
+  assert(verify_header(header) == 0);
 }
 
 void test_verify_header_too_small_data()
 {
-  uint8_t valid_header[CRYPTDATUM_HEADER_SIZE-1] = {0};
-  memcpy(valid_header, magic, sizeof(magic));
-  memcpy(valid_header + CRYPTDATUM_HEADER_SIZE-1 - sizeof(delimiter), delimiter, sizeof(delimiter));
-  assert(verify_header(valid_header) == 0);
+  uint8_t header[CRYPTDATUM_HEADER_SIZE-1] = {0};
+  memcpy(header, CRYPTDATUM_MAGIC, 8);
+
+  uint16_t version_n = htobe16(1);
+  uint64_t datum_draft_n = htobe64(DATUM_DRAFT);
+  memcpy(header + 8, &version_n, 2);
+  memcpy(header + 10, &datum_draft_n, 8);
+
+  memcpy(header + CRYPTDATUM_HEADER_SIZE-9, CRYPTDATUM_DELIMITER, 8);
+  assert(verify_header(header) == 0);
 }
 
 void test_verify_header_delimiter()
 {
     // Test invalid delimiter
-  uint8_t valid_header[CRYPTDATUM_HEADER_SIZE] = {0};
-  memcpy(valid_header, magic, sizeof(magic));
-  memcpy(valid_header + CRYPTDATUM_HEADER_SIZE - sizeof(magic), magic, sizeof(magic));
-  assert(verify_header(valid_header) == 0);
+  uint8_t header[CRYPTDATUM_HEADER_SIZE] = {0};
+  memcpy(header, CRYPTDATUM_MAGIC, 8);
+
+  uint16_t version_n = htobe16(1);
+  uint64_t datum_draft_n = htobe64(DATUM_DRAFT);
+  memcpy(header + 8, &version_n, 2);
+  memcpy(header + 10, &datum_draft_n, 8);
+
+  memcpy(header + CRYPTDATUM_HEADER_SIZE - 8, CRYPTDATUM_MAGIC, 8);
+  assert(verify_header(header) == 0);
 }
 
-int main(int argc, char **argv)
+void test_verify_header_spec_V1()
+{
+  FILE *f = fopen("testdata/v1/valid-header.cdt", "r");
+  if (!f) {
+    fprintf(stderr, "error: failed to open file\n");
+    return;
+  }
+  // Allocate a buffer to hold the header
+  uint8_t *header = malloc(CRYPTDATUM_HEADER_SIZE);
+  if (!header) {
+    fprintf(stderr, "error: failed to allocate memory\n");
+    fclose(f);
+    return;
+  }
+  // Read the header into the buffer
+  size_t bytes_read = fread(header, 1, CRYPTDATUM_HEADER_SIZE, f);
+  fclose(f);
+  int result = verify_header(header);
+  free(header);
+  assert(result == 1);
+}
+
+int main(int argc, char *argv[])
 {
   test_verify_header_magic();
-  test_verify_header_delimiter();
   test_verify_header_too_small_data();
+  test_verify_header_delimiter();
+  test_verify_header_spec_V1();
   return 0;
 }

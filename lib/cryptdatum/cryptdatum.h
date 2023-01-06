@@ -18,6 +18,17 @@
 #define CRYPTDATUM_H
 
 #include <stdint.h>
+#include <stddef.h> // for size_t
+
+/**
+ * @brief Size of a Cryptdatum header in bytes
+ *
+ * This constant defines the size of a Cryptdatum header in bytes. It can be
+ * used by implementations of the Cryptdatum library to allocate sufficient
+ * memory for a Cryptdatum header, or to check the size of a Cryptdatum header
+ * that has been read from a stream.
+ */
+#define CRYPTDATUM_HEADER_SIZE 80
 
 /**
  * @brief Current version of the Cryptdatum format
@@ -34,7 +45,7 @@
  * This constant defines the minimum version of the Cryptdatum format this
  * implementations of the Cryptdatum library supports.
  */
-#define CRYPTDATUM_MIN_VERSION 1
+static const uint8_t CRYPTDATUM_MIN_VERSION = 1;
 
 /**
  * @brief Magic number for Cryptdatum headers
@@ -43,11 +54,9 @@
  * headers. If the magic number field in a Cryptdatum header does not match
  * this value, the header should be considered invalid.
  */
-#define CRYPTDATUM_MAGIC                           \
-  {                                                \
-    0xA7, 0xF6, 0xE5, 0xD4, 0xC3, 0xB2, 0xA1, 0xE1 \
-  }
-static const uint8_t magic[] = CRYPTDATUM_MAGIC;
+static const uint8_t CRYPTDATUM_MAGIC[] = {
+  0xA7, 0xF6, 0xE5, 0xD4, 0xC3, 0xB2, 0xA1, 0xE1
+};
 
 /**
  * @brief Delimiter for Cryptdatum headers
@@ -56,22 +65,22 @@ static const uint8_t magic[] = CRYPTDATUM_MAGIC;
  * Cryptdatum header. If the delimiter field in a Cryptdatum header does not
  * match this value, the header should be considered invalid.
  */
-#define CRYPTDATUM_DELIMITER                       \
-  {                                                \
-    0xC8, 0xB7, 0xA6, 0xE5, 0xD4, 0xC3, 0xB2, 0xF1 \
-  }
+static const uint8_t CRYPTDATUM_DELIMITER[] = {
+  0xC8, 0xB7, 0xA6, 0xE5, 0xD4, 0xC3, 0xB2, 0xF1
+};
 
-static const uint8_t delimiter[] = CRYPTDATUM_DELIMITER;
-
-/**
- * @brief Size of a Cryptdatum header in bytes
- *
- * This constant defines the size of a Cryptdatum header in bytes. It can be
- * used by implementations of the Cryptdatum library to allocate sufficient
- * memory for a Cryptdatum header, or to check the size of a Cryptdatum header
- * that has been read from a stream.
- */
-#define CRYPTDATUM_HEADER_SIZE 64
+#define DATUM_INVALID (1 << 0)
+#define DATUM_DRAFT (1 << 1)
+#define DATUM_EMPTY (1 << 2)
+#define DATUM_CHECKSUM (1 << 3)
+#define DATUM_OPC (1 << 4)
+#define DATUM_COMPRESSED (1 << 5)
+#define DATUM_ENCRYPTED (1 << 6)
+#define DATUM_EXTRACTABLE (1 << 7)
+#define DATUM_SIGNED (1 << 8)
+#define DATUM_STREAMABLE (1 << 9)
+#define DATUM_CUSTOM (1 << 10)
+#define DATUM_COMPROMISED (1 << 11)
 
 /**
  * @brief Cryptdatum header structure

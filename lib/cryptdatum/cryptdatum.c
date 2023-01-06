@@ -29,27 +29,82 @@
  */
 
 #include "cryptdatum.h"
-#include <stddef.h> // for size_t
 #include <string.h>
+#include <stdbool.h>
+#include <endian.h>
+
+#define magic_date 1652155382000000001
+
+const uint8_t empty[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 int verify_header(const uint8_t *data)
 {
   // Check for valid header size
-  if (data == NULL)
-  {
-    return 0;
-  }
-  static const uint8_t magic[] = CRYPTDATUM_MAGIC;
-  static const uint8_t delimiter[] = CRYPTDATUM_DELIMITER;
-
-  if (memcmp(data, magic, sizeof(magic)) != 0)
-  {
-    return 0;
+  if (data == NULL) {
+    return false;
   }
 
-  if (memcmp(data + CRYPTDATUM_HEADER_SIZE - sizeof(delimiter), delimiter, sizeof(delimiter)) != 0)
-  {
-    return 0;
+  // check magic and delimiter
+  if (memcmp(data, CRYPTDATUM_MAGIC, 8) != 0 || memcmp(data + 72, CRYPTDATUM_DELIMITER, 8) != 0) {
+    return false;
   }
-  return 1;
+
+  // check version is >= 1
+  if (le16toh(*((uint16_t *)(data + 8))) < 1) {
+    return false;
+  }
+
+  // break here if DatumDraft is set
+  uint64_t flags = le64toh(*((uint64_t *)(data + 10)));
+  if (flags & DATUM_DRAFT || flags & DATUM_COMPROMISED) {
+    return true;
+  }
+
+  // It it was not a draft it must have timestamp
+  if (le64toh(*((uint64_t *)(data + 18))) < magic_date) {
+    return false;
+  }
+
+  // DatumOPC is set then counter value must be gte 1
+  if (flags & DATUM_OPC) {
+    if (le32toh(*((uint32_t *)(data + 26))) < 1) {
+      return false;
+    }
+  }
+
+  // DatumChecksum Checksum must be set
+  if (flags & DATUM_CHECKSUM && memcmp(data + 30, empty, 8) == 0) {
+    return false;
+  }
+
+  // DatumEmpty and DatumDraft
+  if (flags & DATUM_EMPTY) {
+    // Size field must be set
+    if (le64toh(*((uint64_t *)(data + 38))) < 1) {
+      return false;
+    }
+
+    // DatumCompressed compression algorithm must be set
+    if (flags & DATUM_COMPRESSED && le16toh(*((uint16_t *)(data + 46))) < 1) {
+      return false;
+    }
+
+    // DatumEncrypted encryption algorithm must be set
+    if (flags & DATUM_ENCRYPTED && le16toh(*((uint16_t *)(data + 48))) < 1) {
+      return false;
+    }
+
+    // DatumExtractable payl;oad can be extracted then filename must be set
+    if (flags & DATUM_EXTRACTABLE && memcmp(data + 50, empty, 8) == 0) {
+      return false;
+    }
+  }
+
+  // DatumSigned then Signature Type must be also set
+  // however value of the signature Size may depend on Signature Type
+  if (flags & DATUM_SIGNED && le16toh(*((uint16_t *)(data + 58))) < 1) {
+    return false;
+  }
+
+  return true;
 }

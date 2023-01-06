@@ -1,3 +1,5 @@
+use std::ops::BitAnd;
+
 /// Current version of the Cryptdatum format
 ///
 /// This constant defines the current version of the Cryptdatum format.
@@ -18,7 +20,7 @@ pub const MIN_VERSION: u16 = 1;
 /// used by implementations of the Cryptdatum library to allocate sufficient
 /// memory for a Cryptdatum header, or to check the size of a Cryptdatum header
 /// that has been read from a stream.
-pub const HEADER_SIZE: usize = 64;
+pub const HEADER_SIZE: usize = 80;
 
 /// Magic number for Cryptdatum headers
 ///
@@ -41,7 +43,7 @@ pub const DELIMITER: [u8; 8] = [0xC8, 0xB7, 0xA6, 0xE5, 0xD4, 0xC3, 0xB2, 0xF1];
 /// a Cryptdatum datum, as well as to indicate the features that are used by
 /// the datum.
 #[repr(C)]
-pub struct CryptdatumHeader {
+pub struct Header {
   pub magic: [u8; 8], // CRYPTDATUM_MAGIC
   pub version: u16, // Indicates the version of the Cryptdatum
   pub timestamp: u64, // Unix timestamp in nanoseconds
@@ -56,6 +58,53 @@ pub struct CryptdatumHeader {
   reserved: [u8; 5], // Reserved for future use
   pub delimiter:[u8; 8], // CRYPTDATUM_DELIMITER
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u64)]
+pub enum DatumFlag {
+  DatumInvalid = 1 << 0,
+  DatumDraft = 1 << 1,
+  DatumEmpty = 1 << 2,
+  DatumChecksum = 1 << 3,
+  DatumOPC = 1 << 4,
+  DatumCompressed = 1 << 5,
+  DatumEncrypted = 1 << 6,
+  DatumExtractable = 1 << 7,
+  DatumSigned = 1 << 8,
+  DatumStreamable = 1 << 9,
+  DatumCustom = 1 << 10,
+  DatumCompromised = 1 << 11,
+}
+
+impl BitAnd<DatumFlag> for DatumFlag {
+  type Output = bool;
+
+  fn bitand(self, rhs: DatumFlag) -> bool {
+      (self as u64) & (rhs as u64) != 0
+  }
+}
+
+impl BitAnd<u64> for DatumFlag {
+  type Output = bool;
+
+  fn bitand(self, rhs: u64) -> bool {
+      (self as u64) & rhs != 0
+  }
+
+}
+
+impl BitAnd<DatumFlag> for u64 {
+  type Output = bool;
+
+  fn bitand(self, rhs: DatumFlag) -> bool {
+      self & (rhs as u64) != 0
+  }
+}
+
+
+
+const EMPTY: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+const MAGIC_DATE: u64 = 1652155382000000001;
 
 /// Verify a Cryptdatum header
 ///
@@ -80,18 +129,111 @@ pub fn verify_header(data: &[u8]) -> bool {
   if &data[0..8] != MAGIC {
       return false;
   }
-  if &data[56..64] != DELIMITER {
+  // check magic and delimiter
+  if !data[..8].eq(&MAGIC) || !data[72..80].eq(&DELIMITER) {
+    return false;
+  }
+
+  // check version is >= 1
+  let version = u16::from_le_bytes([data[8], data[9]]);
+  if version < VERSION {
+      return true;
+  }
+
+  // break here if DatumDraft is set
+  let flags = u64::from_le_bytes([
+    data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17],
+  ]);
+
+  if flags & DatumFlag::DatumDraft  || flags & DatumFlag::DatumCompromised  {
+    return true;
+  }
+
+  // It it was not a draft it must have timestamp
+  let timestamp = u64::from_le_bytes([
+    data[18], data[19], data[20], data[21], data[22], data[23], data[24], data[25],
+  ]);
+  if timestamp < MAGIC_DATE {
       return false;
   }
 
-  // Verify that the version number matches the expected value
-  let version = u16::from_le_bytes([data[8], data[9]]);
-  if version != VERSION {
+  // DatumOPC is set then counter value must be gte 1
+  if flags & DatumFlag::DatumOPC {
+    let counter = u32::from_le_bytes([data[26], data[27], data[28], data[29]]);
+    if counter < 1 {
       return false;
+    }
+  }
+
+  // DatumChecksum Checksum must be set
+  if flags & DatumFlag::DatumChecksum  && data[30..38].eq(&EMPTY) {
+    return false;
+  }
+
+  // Not DatumEmpty or DatumDraft
+  if flags & DatumFlag::DatumEmpty  {
+    // Size field must be set
+    let size = u64::from_le_bytes([
+      data[38], data[39], data[40], data[41], data[42], data[43], data[44], data[45],
+    ]);
+    if size < 1 {
+      return false;
+    }
+
+    // DatumCompressed compression algorithm must be set
+    if flags & DatumFlag::DatumCompressed {
+      let algorithm = u16::from_le_bytes([data[46], data[47]]);
+      if algorithm < 1 {
+          return false;
+      }
+    }
+    // DatumEncrypted encryption algorithm must be set
+    if flags & DatumFlag::DatumEncrypted {
+      let algorithm = u16::from_le_bytes([data[48], data[49]]);
+      if algorithm < 1 {
+          return false;
+      }
+    }
+
+    // DatumExtractable payl;oad can be extracted then filename must be set
+    if flags & DatumFlag::DatumExtractable && data[50..58].eq(&EMPTY) {
+      return false;
+    }
+  }
+
+  // DatumSigned then Signature Type must be also set
+  // however value of the signature Size may depend on Signature Type
+  if flags & DatumFlag::DatumSigned {
+    let signature_type = u16::from_le_bytes([data[58], data[59]]);
+    if signature_type < 1 {
+      return false;
+    }
   }
 
   // If all checks pass, return true
   true
+}
+
+fn set_header_version(slice: &mut [u8], version: u16) {
+  if slice.len() < 10 {
+    return;
+  }
+  slice[8] = version as u8;
+  slice[9] = (version >> 8) as u8;
+}
+
+fn set_header_date(slice: &mut [u8], nsec: u64) {
+  if slice.len() < 25 {
+    return;
+  }
+  slice[18] = nsec as u8;
+  slice[19] = (nsec >> 8) as u8;
+  slice[20] = (nsec >> 16) as u8;
+  slice[21] = (nsec >> 24) as u8;
+  slice[22] = (nsec >> 32) as u8;
+  slice[23] = (nsec >> 40) as u8;
+  slice[24] = (nsec >> 48) as u8;
+  slice[25] = (nsec >> 56) as u8;
 }
 
 #[cfg(test)]
@@ -110,17 +252,18 @@ mod tests {
     // Test valid magic
     let mut data = [0; HEADER_SIZE];
     data[0..8].copy_from_slice(&MAGIC);
-    data[8] = VERSION as u8;
-    data[9] = (VERSION >> 8) as u8;
-    data[56..64].copy_from_slice(&DELIMITER);
+    set_header_version(&mut data, VERSION);
+    set_header_date(&mut data, MAGIC_DATE);
+
+
+    data[72..80].copy_from_slice(&DELIMITER);
     assert!(verify_header(&data));
 
     // Test invalid magic
     let mut data = [0; HEADER_SIZE];
     data[0] = 0x00;
-    data[8] = VERSION as u8;
-    data[9] = (VERSION >> 8) as u8;
-    data[56..64].copy_from_slice(&DELIMITER);
+    set_header_version(&mut data, VERSION);
+    data[72..80].copy_from_slice(&DELIMITER);
     assert!(!verify_header(&data));
   }
 
@@ -129,9 +272,8 @@ mod tests {
   fn verify_header_delimiter() {
     let mut data = [0; HEADER_SIZE];
     data[0..8].copy_from_slice(&MAGIC);
-    data[8] = VERSION as u8;
-    data[9] = (VERSION >> 8) as u8;
-    data[56] = 0x00;
+    set_header_version(&mut data, VERSION);
+    data[72] = 0x00;
     assert!(!verify_header(&data));
   }
 }

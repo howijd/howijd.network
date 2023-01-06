@@ -6,8 +6,7 @@ clean:
 
 test: clean
 	# C
-	gcc -o cryptdatum_test_c cryptdatum_test.c cryptdatum.c
-	./cryptdatum_test_c
+	gcc -o cryptdatum_test_c cryptdatum_test.c cryptdatum.c && ./cryptdatum_test_c
 
 	# rust
 	cargo test
