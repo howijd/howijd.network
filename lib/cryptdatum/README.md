@@ -26,7 +26,7 @@
 - [Checksum](#checksum)
 - [Compression](#compression)
 - [File extension](#file-extension)
-- [Library Benchmarks](#library-benchmarks)
+- [Implementation Benchmarks](#implementation-benchmarks)
 
 
 ## Introduction
@@ -37,7 +37,10 @@ Cryptdatum can be used to store and transmit data fast. The format includes a nu
 
 ## Design
 
-The Cryptdatum format consists of a 64-byte header followed by the payload. The header contains metadata about the data, including a magic number, version number, timestamp, operation counter, checksum, flags, total size of datum, compression algorithm (if used), encryption algorithm if data is ecrypted which case it will also have Signature Size field set to indicate size of signature after header so that it is easier determine actual start of payload.
+The Cryptdatum (CDT) format consists of a 80-byte header followed by the payload. The header contains metadata about the data, including a magic number, version number, timestamp, operation counter, checksum, flags, total size of datum, compression algorithm (if used), encryption algorithm if data is ecrypted which case it will also have Signature Size field set to indicate size of signature after header so that it is easier determine actual start of payload.
+
+
+**Contents of the header**
 
 The magic number is an 8-byte value that identifies the header as a Cryptdatum header. It helps to prevent the header from being mistaken for data belonging to another format.
 
@@ -67,6 +70,8 @@ The Custom field is a value that implementations and higher lkevel librareis can
 
 The delimiter is an 8-byte value that marks the end of the header. It helps to prevent the header from being misinterpreted as part of the data payload. It is also used to ensure that the header is properly parsed by the decoder.
 
+**Payload**
+
 The payload is the data being encoded, following the header. It can be of any length and can contain any type of data.
 
 ## Cryptdatum Header Format
@@ -83,7 +88,7 @@ The Cryptdatum header consists of the following fields:
 | Version               | unsigned integer (uint16) | 2            | Indicates the version of the Cryptdatum format. |
 | Flags                 | unsigned integer (uint64) | 8            | Cryptdatum format features flags to indicate which Cryptdatum features are used by that datum e.g whether the data is encrypted, compressed, or has a checksum. has operation counter set is signed etc. |
 | Timestamp             | unsigned integer (uint64) | 8            | Unix timestamp in nanoseconds, indicating the time when the data was created.  |
-| Operation Counter     | unsigned integer (uint32) | 4            | Unique operation ID for the data. |
+| OPC                   | unsigned integer (uint32) | 4            | Operation Counter - Unique operation ID for the data. |
 | Size                  | unsigned integer (uint64) | 8            | Total size of the data, including the header and optional signature. Eg. useful for parsers, decoders,encoders to prealocate requirexd resourced to be able to process the datum  |
 | Checksum              | unsigned integer (uint64) | 8            | CRC64 checksum for verifying the integrity of the data. |
 | Compression Algorithm | unsigned integer (uint16) | 2            | Indicates the compression algorithm used, if any. |
@@ -173,21 +178,26 @@ To decompress data that has been compressed with Cryptdatum, the DatumCompressed
 
 ## File extension
 
-The .cdt file extension is used to store data in the Cryptdatum format.
-A Cryptdatum file consists of a 64-byte header followed by data.
+The .cdt file extension is used to store data in the Cryptdatum (CDT) format.
+A Cryptdatum file consists of a 80-byte header followed by data (payload).
 
-## Library Benchmarks
+## Implementation Benchmarks
 
-**Following Graphs contain performance metrics score representation which typically indicate better performance when the value is HIGHER. Score is calculated as standard deviation of the metric values and scaled to range 1-(0.1-1.0) relative to other languages**
+**Following Benchmarks contain performance metrics score which indicate better performance when the value is HIGHER. Score is calculated as standard deviation of the metric values and scaled to range 1-(0.1-1.0) relative to other languages**
 
-- **`cpu-clock`**: This event measures the total amount of time that the program spent executing on the CPU. A lower value for this event typically indicates that the program was able to complete its work in less time, which can be a good thing depending on the specific use case.
-- **`task-clock`**: This event measures the total amount of time that the program spent executing on the CPU, including time spent executing in the kernel on behalf of the program. A lower value for this event typically indicates that the program was able to complete its work in less time, which can be a good thing depending on the specific use case.
-- **`cache-misses`**: This event measures the number of times that the program accessed memory that was not present in the cache. The cache is a high-speed memory that stores frequently accessed data, and a cache miss occurs when the program has to access main memory instead. A high number of cache misses can indicate that the program is not making efficient use of the cache, which can negatively impact performance.
-- **`branch-misses`**: This event measures the number of times that the program predicted the outcome of a branch instruction incorrectly and had to perform an extra jump to the correct location in the code. A high number of branch misses can indicate that the program is making inefficient use of branching, which can negatively impact performance.
-- **`context-switches`**: This event measures the number of times that the program was suspended and another program was scheduled to run on the CPU. A high number of context switches can indicate that the program is not making efficient use of the CPU, which can negatively impact performance.
-- **`stability`**: Benchmarks are executed n times (e.g. 100). The Stablity reports total variance of these results.
+- **`cpu-clock`**: This event measures the total amount of time that the program spent executing on the CPU.
+- **`task-clock`**: This event measures the total amount of time that the program spent executing on the CPU, including time spent executing in the kernel on behalf of the program.
+- **`cache-misses`**: This event measures the number of times that the program accessed memory that was not present in the cache. The cache is a high-speed memory that stores frequently accessed data, and a cache miss occurs when the program has to access main memory instead.
+- **`branch-misses`**: This event measures the number of times that the program predicted the outcome of a branch instruction incorrectly and had to perform an extra jump to the correct location in the code.
+- **`context-switches`**: This event measures the number of times that the program was suspended and another program was scheduled to run on the CPU.
+- **`stability`**: Benchmarks are executed n times (e.g. 100). The Stablity reports total variance of these results and high score indicates that application was more stable compared to other languages.
+- **`stability`**: Benchmarks are executed n times (e.g. 100). The Stablity reports total variance of these results and high score indicates that application was more stable compared to other languages.
+- **`cpu-cycles`**: This counts the number of CPU cycles executed by the program.
+- **`instructions`**: This counts the number of instructions executed by the program.
 
 | | |
 | --- | --- |
-| ***Figure 1.** Performing minimal check to verify is file valid Cryptdatum data format*  ![Verify valid header](docs/verify-valid-draft.svg) | |
-| | |
+| ***Figure 1.** Performing minimal check to verify is external file containing Cryptdatum header* | ***Figure 2.** Performing minimal check to verify is external file containing valid Cryptdatum header* |
+| ![Verify valid header](docs/bench-file-has-header.svg) | ![Verify valid header](docs/bench-file-has-valid-header.svg) |
+| ***Figure 3.** Print basic file info* | |
+| ![File Info](docs/bench-file-info.svg) | |

@@ -1,3 +1,7 @@
+# Copyright 2022 The howijd.network Authors
+# Licensed under the Apache License, Version 2.0.
+# See the LICENSE file.
+
 import logging
 
 class LogFormatter(logging.Formatter):
@@ -12,7 +16,6 @@ class LogFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     fmt = "%(asctime)s - {}%(levelname)-8s{} - %(name)s.%(funcName)s - %(message)s"
-
 
     FORMATS = {
         logging.DEBUG: fmt.format(cyan, reset),

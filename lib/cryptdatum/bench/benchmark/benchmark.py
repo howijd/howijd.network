@@ -1,4 +1,6 @@
-
+# Copyright 2022 The howijd.network Authors
+# Licensed under the Apache License, Version 2.0.
+# See the LICENSE file.
 import os
 import subprocess
 import matplotlib.pyplot as plt
@@ -18,47 +20,21 @@ class Benchmark:
 
     self.cwd = os.getcwd()
     log.debug("cwd: %s", self.cwd)
+
     self.benchdir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
     log.debug("benchdir: %s", self.benchdir)
+
     self.libdir = os.path.abspath(os.path.join(self.benchdir, "../"))
     log.debug("libdir: %s", self.libdir)
-    self.bindir = os.path.abspath(os.path.join(self.benchdir, "bin"))
+
+    self.bindir = os.path.abspath(os.path.join(self.libdir, "build/bin"))
     log.debug("bindir: %s", self.bindir)
-    self.resdir = os.path.abspath(os.path.join(self.benchdir, "result"))
-    log.debug("resdir: %s", self.resdir)
 
     self.config = {}
     self.stats = {}
 
   def add(self, lang: str, config = {}):
     self.config[lang] = config
-
-  def build(self):
-    """Build bench cli apps for all languages language
-    """
-    os.chdir(self.benchdir)
-
-    for lang, cnf in self.config.items():
-      self.log.info("building: %s", lang)
-      for cmd in cnf["build"]:
-        build = subprocess.Popen(
-          cmd,
-          stdout=subprocess.PIPE,
-          stderr=subprocess.STDOUT,
-          encoding="utf-8",
-        )
-        self.log.debug("cmd: %s", ' '.join(build.args))
-        while True:
-          line = build.stdout.readline()
-          if not line:
-            break
-          self.log.debug("%s", line.rstrip())
-        code = build.wait()
-        if code != 0:
-          self.log.critical("building complete: %s", lang)
-          exit(code)
-
-        self.log.info("building complete: %s", lang)
 
   def path(self, path: str) -> str:
     """Converts provided path to absolute path
@@ -80,19 +56,25 @@ class Benchmark:
     self.stats[name] = {}
 
     failedbench = False
+    haslang = False
     for lang, cnf in self.config.items():
+      if args[0] not in cnf["cmds"]:
+        self.log.info("skip(%s): %s", name, lang)
+        continue
+
+      haslang = True
       self.log.info("benchmarking(%s): %s", name, lang)
       bench = subprocess.Popen(
         [
           "perf", "stat", "--sync", "--repeat=100", "--json-output",
-          "-e", "cpu-clock,task-clock,cache-misses,branch-misses,context-switches,cpu-migrations",
+          "-e", "cpu-clock,task-clock,cache-misses,branch-misses,context-switches,cpu-cycles,instructions",
           os.path.join(self.bindir, cnf["bin"]),
         ] + args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
          encoding="utf-8",
       )
-      pid = bench.pid
+      # pid = bench.pid
       self.log.info("cmd: %s", ' '.join(bench.args))
       self.stats[name][lang] = {}
 
@@ -101,9 +83,13 @@ class Benchmark:
         if not line:
           break
         clean = line.rstrip()
-        event = json.loads(clean)
-        self.stats[name][lang][event["event"]] = event
-        self.log.debug("%s", clean)
+        try:
+          event = json.loads(clean)
+          self.stats[name][lang][event["event"]] = event
+          self.log.debug("%s", clean)
+        except Exception as e:
+          self.log.debug(clean)
+          # self.log.error(e)
 
       code = bench.wait()
       if code != 0:
@@ -114,6 +100,9 @@ class Benchmark:
       self.log.error("some of the benchmarks failed")
       exit(1)
 
+    if not haslang:
+      return
+
     # Create Report SVG
     labels = []
     res_cpu_clock = []
@@ -121,40 +110,54 @@ class Benchmark:
     res_cache_misses = []
     res_branch_misses = []
     res_context_switches = []
+    res_instructions = []
+    res_cpu_cycles = []
     res_standard_deviation = []
 
     for x, y in self.stats[name].items():
-      labels.append(x)
+      labels.append('{name} ({ms} {unit})'.format(name = x, ms = y["cpu-clock:u"]["counter-value"], unit = y["cpu-clock:u"]["unit"]))
       res_cpu_clock.append(float(y["cpu-clock:u"]["counter-value"]))
       res_task_clock.append(float(y["task-clock:u"]["counter-value"]))
       res_cache_misses.append(float(y["cache-misses:u"]["counter-value"]))
       res_branch_misses.append(float(y["branch-misses:u"]["counter-value"]))
       res_context_switches.append(float(y["context-switches:u"]["counter-value"]))
+      res_instructions.append(float(y["instructions:u"]["counter-value"]))
+      res_cpu_cycles.append(float(y["cpu-cycles:u"]["counter-value"]))
       res_standard_deviation.append(self.calculate_perf_standard_deviation(y))
 
     # scale standard_deviation
-    scaled_cpu_clock = self.scale_graph_data(res_cpu_clock)
-    scaled_task_clock = self.scale_graph_data(res_task_clock)
-    scaled_cache_misses = self.scale_graph_data(res_cache_misses)
-    scaled_branch_misses = self.scale_graph_data(res_branch_misses)
-    scaled_context_switches = self.scale_graph_data(res_context_switches)
-    scaled_standard_deviation = self.scale_graph_data(res_standard_deviation)
+    scpu_clock = self.scale_graph_data(res_cpu_clock)
+    stask_clock = self.scale_graph_data(res_task_clock)
+    scache_misses = self.scale_graph_data(res_cache_misses)
+    sbranch_misses = self.scale_graph_data(res_branch_misses)
+    scontext_switches = self.scale_graph_data(res_context_switches)
+    sinstructions = self.scale_graph_data(res_instructions)
+    scpu_cycles = self.scale_graph_data(res_cpu_cycles)
+    standard_deviation = self.scale_graph_data(res_standard_deviation)
+
+    score = [(s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 6 for (s1, s2, s3, s4, s5, s6, s7, s8) in zip(
+      scpu_clock,
+      stask_clock,
+      scache_misses,
+      sbranch_misses,
+      scontext_switches,
+      standard_deviation,
+      sinstructions,
+      scpu_cycles,
+    )]
+    zipped = sorted(zip(labels, score), key=lambda x: x[1], reverse=True)
+    sorted_labels, sorted_score = zip(*zipped)
 
     plt.style.use('dark_background')
-
-    x = np.arange(len(labels))  # the label locations
+    plt.set_loglevel("info")
+    x = np.arange(len(sorted_labels))  # the label locations
     width = 0.05  # the width of the bars
     fig, ax = plt.subplots()
-    ax.barh(x - width*2.5, scaled_cpu_clock, width, label='cpu clock')
-    ax.barh(x - width*1.5, scaled_task_clock, width, label='task clock')
-    ax.barh(x - width/2, scaled_cache_misses, width, label='cache misses')
-    ax.barh(x + width/2, scaled_branch_misses, width, label='branch misses')
-    ax.barh(x + width*1.5, scaled_context_switches, width, label='context switches')
-    ax.barh(x + width*2.5, scaled_standard_deviation, width, label='stability over 100 exec')
+    ax.barh(x - width/2, sorted_score, width, label='score')
 
     ax.set_title(name)
-    ax.set_yticks(x, labels)
-    ax.legend()
+    ax.set_yticks(x, sorted_labels)
+    # ax.legend()
     ax.invert_yaxis()
 
     fig.tight_layout()
@@ -173,6 +176,8 @@ class Benchmark:
 
   def scale_to_range(self, value, min_value, max_value):
     """Scale bench data for graph"""
+    if value == min_value == max_value:
+      return 1
     return 1.1 - (0.1 + (value - min_value) * (1 - 0.1) / (max_value - min_value))
 
   def scale_graph_data(self, data):

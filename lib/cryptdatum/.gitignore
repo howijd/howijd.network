@@ -1,13 +1,7 @@
-# RUST
-Cargo.lock
-target/
-
-
+build/
 draft/
-bench/bin/
-bench/result/
+target/
 **/__pycache__/*
 
-cryptdatum_test_c
 perf.data
-
+Cargo.lock

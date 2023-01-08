@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestVerifyHeaderMagic(t *testing.T) {
+func TestHasValidHeaderMagic(t *testing.T) {
 	header := make([]byte, HeaderSize, HeaderSize)
 	copy(header[:], Magic[:])
 	binary.LittleEndian.PutUint16(header[8:10], Version)     // version
@@ -18,21 +18,21 @@ func TestVerifyHeaderMagic(t *testing.T) {
 	copy(header[72:80], Delimiter[:])
 
 	// Valid magic
-	if !VerifyHeader(header) {
+	if !HasValidHeader(header) {
 		t.Errorf("expected header to be valid")
 	}
 
 	// Invalid magic
 	copy(header[0:8], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	if VerifyHeader(header) {
+	if HasValidHeader(header) {
 		t.Errorf("expected header to be invalid")
 	}
 }
 
-func TestVerifyHeaderTooSmallData(t *testing.T) {
+func TestHasValidHeaderTooSmallData(t *testing.T) {
 	var header []byte
 	for range [65]byte{} {
-		if VerifyHeader(header) {
+		if HasValidHeader(header) {
 			t.Errorf("expected header to be invalid")
 		} else {
 			header = append(header, 0xFF)
@@ -40,7 +40,7 @@ func TestVerifyHeaderTooSmallData(t *testing.T) {
 	}
 }
 
-func TestVerifyHeaderDelimiter(t *testing.T) {
+func TestHasValidHeaderDelimiter(t *testing.T) {
 	header := make([]byte, HeaderSize, HeaderSize)
 	copy(header[:], Magic[:])
 	binary.LittleEndian.PutUint16(header[8:10], Version)     // version
@@ -48,23 +48,23 @@ func TestVerifyHeaderDelimiter(t *testing.T) {
 	copy(header[72:80], Delimiter[:])
 
 	// Valid delimiter
-	if !VerifyHeader(header) {
+	if !HasValidHeader(header) {
 		t.Errorf("expected header to be valid")
 	}
 
 	// Invalid delimiter
 	copy(header[72:80], []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
-	if VerifyHeader(header) {
+	if HasValidHeader(header) {
 		t.Errorf("expected header to be invalid")
 	}
 }
 
-func TestVerifyHeaderSpecV1(t *testing.T) {
-	head, err := os.ReadFile("testdata/v1/valid-header.cdt")
+func TestHasValidHeaderSpecV1(t *testing.T) {
+	head, err := os.ReadFile("testdata/v1/has-aligned-header.cdt")
 	if err != nil {
 		t.Error(err)
 	}
-	if !VerifyHeader(head) {
+	if !HasValidHeader(head) {
 		t.Errorf("expected header to be invalid")
 	}
 }

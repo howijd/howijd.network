@@ -1,3 +1,7 @@
+// Copyright 2022 The howijd.network Authors
+// Licensed under the Apache License, Version 2.0.
+// See the LICENSE file.
+
 package main
 
 import (
@@ -15,13 +19,21 @@ var (
 )
 
 func main() {
-	if err := specV1createValidDraft(); err != nil {
-		slog.Error("failed to create spec v1 valid-header-only.cdt", err)
-		os.Exit(1)
+	var generators = []func() (string, error){
+		createTestHasValidHeader,
+	}
+	for _, gen := range generators {
+		if name, err := gen(); err != nil {
+			slog.Error("failed to create", err, slog.String("file", name))
+			os.Exit(1)
+		}
 	}
 }
 
-func specV1createValidDraft() error {
+// specV1createValidForTesting outputs empty cdt for testing
+// header field alignment.
+func createTestHasValidHeader() (string, error) {
+	const name = "has-aligned-header.cdt"
 	var header [80]byte
 
 	// Set Magic
@@ -32,49 +44,51 @@ func specV1createValidDraft() error {
 
 	ts := time.Date(2022, 5, 10, 4, 3, 2, 1, time.UTC).UnixNano()
 
-	// 18-25 Set flag
+	// Set flags
 	flagDatumEmpty := 4
 	flagDatumChecksum := 8
 	flagDatumOPC := 16
-	flagDatumEncrypted := 32
-	flagDatumCompressed := 64
-	flagDatumSigned := 128
-	flagDatumCustom := 512
+	flagDatumCompressed := 32
+	flagDatumEncrypted := 64
+	flagDatumExtractable := 128
+	flagDatumSigned := 256
+	flagDatumCustom := 1024
 
-	flag := uint64(flagDatumEmpty | flagDatumChecksum | flagDatumOPC | flagDatumEncrypted | flagDatumCompressed | flagDatumSigned | flagDatumCustom)
+	flag := uint64(flagDatumEmpty | flagDatumChecksum | flagDatumOPC | flagDatumEncrypted | flagDatumCompressed | flagDatumSigned | flagDatumCustom | flagDatumExtractable)
 	binary.LittleEndian.PutUint64(header[10:18], flag)
 
 	// Set unix time in nanoseconds
 	binary.LittleEndian.PutUint64(header[18:26], uint64(ts))
 
 	// Op counter
-	binary.LittleEndian.PutUint32(header[26:30], 1<<32/2)
+	binary.LittleEndian.PutUint32(header[26:30], 2)
 
 	// Checksum
 	copy(header[30:38], []byte{'c', 'h', 'e', 'c', 'k', 's', 'u', 'm'})
 
 	// Size
-	binary.LittleEndian.PutUint64(header[38:46], 1<<64/2)
+	binary.LittleEndian.PutUint64(header[38:46], 3)
 
 	// Compression Algorithm
-	binary.LittleEndian.PutUint16(header[46:48], 1<<16/2)
+	binary.LittleEndian.PutUint16(header[46:48], 4)
 
 	// Encryption Algorithm
-	binary.LittleEndian.PutUint16(header[48:50], 1<<16/4)
-
-	// File extension
-	copy(header[50:58], []byte{'a', 'f', 'f', 'i', 'x', 'i', 'n', 'g'})
+	binary.LittleEndian.PutUint16(header[48:50], 5)
 
 	// Signature Type
-	binary.LittleEndian.PutUint16(header[58:60], 1<<16/2)
+	binary.LittleEndian.PutUint16(header[50:52], 6)
 
 	// Signature Size
-	binary.LittleEndian.PutUint16(header[60:64], 1<<16/4)
+	binary.LittleEndian.PutUint32(header[52:56], 7)
+
+	// File extension
+	copy(header[56:64], []byte{'a', 'f', 'f', 'i', 'x', 'i', 'n', 'g'})
 
 	// Custom data
 	copy(header[64:72], []byte{'t', 'a', 'i', 'l', 'o', 'r', 'e', 'd'})
 
+	// delimiter
 	copy(header[72:80], delimiter[:])
 
-	return os.WriteFile("valid-header.cdt", header[:], 0640)
+	return name, os.WriteFile(name, header[:], 0640)
 }

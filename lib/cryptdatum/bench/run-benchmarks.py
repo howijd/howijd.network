@@ -1,47 +1,40 @@
 #!/usr/bin/env python3
-
-# import os
-# import logging as log
-
-
-# import sys
-# import subprocess
-
-
-# log.debug(cwd)
-# log.debug(benchdir)
-# log.debug(libdir)
+# Copyright 2022 The howijd.network Authors
+# Licensed under the Apache License, Version 2.0.
+# See the LICENSE file.
 
 from benchmark import *
-from logging import DEBUG
+from logging import INFO
 
-bench = new_bench(DEBUG)
+bench = new_bench(INFO)
 
-bench.add("go", {
-  "bin": "cryptdatum-bench-go",
-  "build": [
-    ["go", "build", "-x", "-o", "bin/cryptdatum-bench-go", "cmd/cryptdatum-bench.go"]
-  ],
+bench.add("Go", {
+  "bin": "cryptdatum-go",
+  "cmds": [
+    "file-has-header",
+    "file-has-valid-header",
+    "file-info",
+  ]
 })
-bench.add("c", {
-  "bin": "cryptdatum-bench-c",
-  "build": [
-    ["gcc", "-o", "bin/cryptdatum-bench-c", "cmd/cryptdatum-bench.c", "../cryptdatum.c"]
-  ],
+bench.add("C", {
+  "bin": "cryptdatum-c",
+  "cmds": [
+    "file-has-header",
+    "file-has-valid-header",
+    "file-info",
+  ]
 })
-bench.add("rust", {
-  "bin": "cryptdatum-bench-rust",
-  "build": [
-    ["rustc", "--crate-type=lib", "-o", "bin/libcryptdatum.rlib",  "../cryptdatum.rs"],
-    ["rustc", "cmd/cryptdatum-bench.rs", "--extern", "cryptdatum=bin/libcryptdatum.rlib", "--edition", "2021", "--crate-type", "bin", "-o", "bin/cryptdatum-bench-rust"],
-  ],
+bench.add("Rust", {
+  "bin": "cryptdatum-rust",
+  "cmds": [
+    "file-has-header",
+    "file-has-valid-header",
+    "file-info",
+  ]
 })
 
-bench.build()
-
-# Benchmark verify header with valid dra
-bench.run("Verify valid draft header", ["verify", bench.path("testdata/v1/valid-header.cdt")], "verify-valid-draft")
+bench.run("File Has Header", ["file-has-header", bench.path("testdata/v1/has-aligned-header.cdt")], "bench-file-has-header")
+bench.run("File Has Valid Header", ["file-has-valid-header", bench.path("testdata/v1/has-aligned-header.cdt")], "bench-file-has-valid-header")
+bench.run("File Info", ["file-info", bench.path("testdata/v1/has-aligned-header.cdt"), "1>/dev/null"], "bench-file-info")
 
 bench.print()
-
-
