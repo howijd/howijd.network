@@ -329,12 +329,12 @@ pub mod timestamp {
   /// # Examples
   ///
   /// ```
-  /// use timestamp::format;
+  /// use cryptdatum::timestamp::format;
   ///
   /// let ts = 1234567890;
-  /// let fmt = "%Y-%m-%dT%H:%M:%S%.9fZ";
+  /// let fmt = "%Y-%m-%dT%H:%M:%S%nZ";
   /// let s = format(fmt, ts);
-  /// assert_eq!(s, "1970-01-01T00:02:03.123456790Z");
+  /// assert_eq!(s, "1970-01-01T01:00:00.234567890Z");
   /// ```
   pub fn format(fmt: &str, ts: u64) -> String {
     let (secs, nsec) = div_rem(ts, 1_000_000_000);

@@ -36,11 +36,16 @@ help:
 	@echo  '  lib-rust	  	- build rust library'
 	@echo  ''
 	@echo  'TESTS:'
-	@echo  '  rust		  	- build rust cli tool'
+	@echo  '  test		  	- run all tests'
+	@echo  '  test-rust		- test rust source'
+	@echo  ''
+	@echo  'BENCHMARK:'
+	@echo  '  bench		  	- run all benchmarks'
 	@echo  ''
 	@echo  'GENERAL:'
 	@echo  '  clean		  	- Remove most generated files but keep the config and'
 	@echo  '            	       	  enough build support to build external modules'
+	@echo  '  env	  		- print make config'
 	@echo  '  version	  	- print verision info which would be used by build'
 	@echo  ''
 
@@ -72,6 +77,7 @@ endif # ifneq ($(CDTBUILD_OUTPUT),)
 
 CDT_BUILD_LIB_DIR = $(CDT_BUILD_DIR)/lib
 CDT_BUILD_BIN_DIR = $(CDT_BUILD_DIR)/bin
+CDT_BENCH_DIR = $(CDT_SRC_DIR)/bench
 
 CDT_RUST_LIB = $(CDT_BUILD_LIB_DIR)/libcryptdatum.rlib
 
@@ -91,6 +97,10 @@ MAKEFLAGS += --no-print-directory
 PHONY += clean
 clean:
 	rm -rf $(CDT_BUILD_DIR)
+
+PHONY += bench
+bench:
+	$(CDT_BENCH_DIR)/run-benchmarks.py
 
 PHONY += bin-rust
 bin-rust: lib-rust
@@ -112,7 +122,7 @@ bin-c:
 		cryptdatum.c
 
 # build all binaries and deps
-PHONY += bin-all
+PHONY += bin
 bin: bin-rust bin-go bin-c
 
 PHONY += env
@@ -126,6 +136,24 @@ lib-rust:
 		-C debuginfo=0 \
 		-C opt-level=3 \
 		-o $(CDT_RUST_LIB)
+
+PHONY += test
+test: test-rust test-go test-c
+
+PHONY += test-rust
+test-rust:
+	@cargo test
+
+PHONY += test-go
+test-go:
+	@go test -cover .
+
+PHONY += test-c
+test-c:
+	gcc -o $(CDT_BUILD_BIN_DIR)/cryptdatum-c-test \
+		cryptdatum_test.c \
+		cryptdatum.c \
+		&& $(CDT_BUILD_BIN_DIR)/cryptdatum-c-test
 
 PHONY += version
 version:

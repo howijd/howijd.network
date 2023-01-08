@@ -22,8 +22,9 @@
 
 ---
 
-
 [howijd.network] is a decentralized ecosystem and [DAO] that aims to increase the adoption and use of secure decentralized technologies. It uses advanced technologies such as the Hydra Head protocol and the Ouroboros proof-of-stake consensus protocol to create a platform for an integrated productivity tool. Users can participate in decentralized governance by staking HOWI tokens and holding Extended PFP NFTs on staking wallets. Howijd.Network has a unique feature: deployable Addons. These offer extensive customization options and can be used for a range of applications. The platform's modular design and deployable Addons make it suitable for a wide range of domains and ideal for businesses, entrepreneurs, freelancers, and individuals.
+
+[Cryptdatum Format Specification v1](lib/cryptdatum/README.md)
 
 <!-- links -->
 [howijd.network]: https://howijd.network

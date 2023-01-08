@@ -8,7 +8,7 @@
 #include <string.h>
 #include <endian.h>
 
-void test_verify_header_magic()
+void test_has_valid_header_magic()
 {
   // Test invalid magic number
   uint8_t header[CDT_HEADER_SIZE];
@@ -20,10 +20,10 @@ void test_verify_header_magic()
   memcpy(header + 10, &datum_draft_n, 8);
 
   memcpy(header + CDT_HEADER_SIZE - 8, CDT_DELIMITER, 8);
-  assert(verify_header(header) == 0);
+  assert(has_valid_header(header) == 0);
 }
 
-void test_verify_header_too_small_data()
+void test_has_valid_header_too_small_data()
 {
   uint8_t header[CDT_HEADER_SIZE-1];
   memcpy(header, CDT_MAGIC, 8);
@@ -34,10 +34,10 @@ void test_verify_header_too_small_data()
   memcpy(header + 10, &datum_draft_n, 8);
 
   memcpy(header + CDT_HEADER_SIZE-9, CDT_DELIMITER, 8);
-  assert(verify_header(header) == 0);
+  assert(has_valid_header(header) == 0);
 }
 
-void test_verify_header_delimiter()
+void test_has_valid_header_delimiter()
 {
     // Test invalid delimiter
   uint8_t header[CDT_HEADER_SIZE];
@@ -49,12 +49,12 @@ void test_verify_header_delimiter()
   memcpy(header + 10, &datum_draft_n, 8);
 
   memcpy(header + CDT_HEADER_SIZE - 8, CDT_MAGIC, 8);
-  assert(verify_header(header) == 0);
+  assert(has_valid_header(header) == 0);
 }
 
-void test_verify_header_spec_V1()
+void test_has_valid_header_spec_V1()
 {
-  FILE *f = fopen("testdata/v1/valid-header.cdt", "r");
+  FILE *f = fopen("testdata/v1/has-aligned-header.cdt", "r");
   if (!f) {
     fprintf(stderr, "error: failed to open file\n");
     return;
@@ -69,16 +69,16 @@ void test_verify_header_spec_V1()
   // Read the header into the buffer
   size_t bytes_read = fread(header, 1, CDT_HEADER_SIZE, f);
   fclose(f);
-  int result = verify_header(header);
+  int result = has_valid_header(header);
   free(header);
   assert(result == 1);
 }
 
 int main(int argc, char *argv[])
 {
-  test_verify_header_magic();
-  test_verify_header_too_small_data();
-  test_verify_header_delimiter();
-  test_verify_header_spec_V1();
+  test_has_valid_header_magic();
+  test_has_valid_header_too_small_data();
+  test_has_valid_header_delimiter();
+  test_has_valid_header_spec_V1();
   return 0;
 }
