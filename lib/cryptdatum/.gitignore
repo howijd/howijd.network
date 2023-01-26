@@ -1,7 +1,0 @@
-build/
-draft/
-target/
-**/__pycache__/*
-
-perf.data
-Cargo.lock
